@@ -1,30 +1,28 @@
-FROM docker:24.0-dind
+# Usa una imagen base de Ubuntu
+FROM ubuntu:20.04
 
-# Instalar dependencias necesarias
-RUN apk add --no-cache git bash
+# Configura variables para evitar interacciones (para que apt-get sea no interactivo)
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Configurar BuildKit y Docker daemon
-ENV DOCKER_BUILDKIT=1
-RUN mkdir -p /etc/docker && \
-    echo '{"features": {"buildkit": true}, "experimental": true}' > /etc/docker/daemon.json
+# Actualiza el sistema e instala las dependencias necesarias
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    golang \
+    rustc \
+    nodejs \
+    npm \
+    python3 \
+    python3-pip \
+ && rm -rf /var/lib/apt/lists/*
 
-# Instalar y configurar buildx durante la construcción
-RUN dockerd & \
-    sleep 5 && \
-    docker buildx install && \
-    docker buildx create --name builder --use && \
-    docker buildx inspect --bootstrap && \
-    pkill dockerd
-
-# Crear directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copiar script de ejecución
-COPY execute_all.sh .
+# Copia todo el contenido del repositorio en el contenedor
+COPY . /app
 
-# Dar permisos de ejecución
+# Otorga permisos de ejecución al script
 RUN chmod +x execute_all.sh
 
-# Ejecutar el script
-ENTRYPOINT ["dockerd-entrypoint.sh"]
-CMD ["bash", "./execute_all.sh"]
+# Al iniciar el contenedor se ejecutará el script que compila y ejecuta todas las soluciones
+CMD ["./execute_all.sh"]

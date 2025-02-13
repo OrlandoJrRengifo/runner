@@ -1,61 +1,62 @@
 #!/bin/bash
+set -e  # Detiene el script si ocurre algún error
 
-# Repositorio de soluciones
-REPO_URL="https://github.com/OrlandoJrRengifo/codigos.git"
-DIRECTORY="CODIGOS"
+OUTPUT_FILE="output.txt"
+TIME_FILE="times.txt"
 
-# Clonar el repositorio si no existe
-if [ ! -d "$DIRECTORY" ]; then
-    git clone "$REPO_URL" "$DIRECTORY" || { echo "Error clonando el repositorio"; exit 1; }
-else
-    echo "Repositorio ya clonado, actualizando..."
-    (cd "$DIRECTORY" && git pull)
-fi
+# Inicializa los archivos de salida
+echo "Resultados de la ejecución:" > "$OUTPUT_FILE"
+echo "" > "$TIME_FILE"
 
-# Lenguajes y nombres de imágenes
-declare -A LANGUAGES=(
-    ["go"]="go-app"
-    ["rust"]="rust-app"
-    ["javascript"]="node-app"
-    ["python"]="python-app"
-    ["c"]="c-app"
-)
+# Función para compilar, ejecutar y medir el tiempo de cada solución
+run_solution() {
+  local lang="$1"         # Nombre del lenguaje (ej. Go, Rust, etc.)
+  local dir="$2"          # Directorio donde se encuentra la solución
+  local compile_cmd="$3"  # Comando para compilar (si es necesario), vacío en caso contrario
+  local run_cmd="$4"      # Comando para ejecutar la solución
 
-# Crear carpeta de logs y archivo de resultados
-mkdir -p logs
-OUTPUT_FILE="execution_results.txt"
-echo "Comparación de tiempos de ejecución" > "$OUTPUT_FILE"
-echo "------------------------------------" >> "$OUTPUT_FILE"
+  echo "Ejecutando solución en $lang..."
+  cd "$dir"
 
-for LANG in "go" "rust" "javascript" "python" "c"; do
-    IMAGE_NAME=${LANGUAGES[$LANG]}
-    LANG_DIR="$DIRECTORY/$LANG"
-    LOG_FILE="logs/$LANG/output.txt"
+  # Si se especifica un comando de compilación, se ejecuta
+  if [ -n "$compile_cmd" ]; then
+    eval "$compile_cmd"
+  fi
 
-    if [ ! -d "$LANG_DIR" ]; then
-        echo "Error: No se encontró el directorio $LANG_DIR"
-        continue
-    fi
+  # Se mide el tiempo de ejecución
+  start=$(date +%s%3N)         # Tiempo en milisegundos al inicio
+  eval "$run_cmd" >> "../$OUTPUT_FILE"
+  end=$(date +%s%3N)           # Tiempo en milisegundos al finalizar
+  elapsed=$((end - start))
 
-    echo "Construyendo imagen para $LANG..."
-    (cd "$LANG_DIR" && docker buildx build --load -t "$IMAGE_NAME" .) || { echo "Error al construir $LANG"; continue; }
+  # Se guarda el tiempo de ejecución junto con el nombre del lenguaje
+  echo "$lang: $elapsed ms" >> "../$TIME_FILE"
+  cd ..
+}
 
-    echo "Ejecutando contenedor para $LANG..."
-    mkdir -p "logs/$LANG"
+### **Ejecución de las Soluciones**
 
-    # Ejecutar y capturar salida
-    docker run --rm "$IMAGE_NAME" | tee "$LOG_FILE"
+# 1. **Solución en Go**
+run_solution "Go" "go" "go build -o solution solution.go" "./solution"
 
-    # Extraer el tiempo de ejecución en diferentes formatos (ms, segundos, etc.)
-    EXEC_TIME=$(grep -Eo '[0-9]+(\.[0-9]+)? (ms|s)' "$LOG_FILE" | head -n 1)
+# 2. **Solución en Rust**
+run_solution "Rust" "rust" "rustc solution.rs -o solution" "./solution"
 
-    if [ -z "$EXEC_TIME" ]; then
-        EXEC_TIME="Tiempo no encontrado"
-    fi
+# 3. **Solución en JavaScript**
+run_solution "JavaScript" "javascript" "" "node solution.js"
 
-    echo "$LANG: $EXEC_TIME" | tee -a "$OUTPUT_FILE"
-done
+# 4. **Solución en Python**
+run_solution "Python" "python" "" "python3 solution.py"
 
-# Mostrar los resultados
-echo "------------------------------------"
-cat "$OUTPUT_FILE"
+# 5. **Solución en C**
+run_solution "C" "c" "gcc solution.c -o solution" "./solution"
+
+### **Ordenar y Mostrar Tiempos**
+
+echo "" >> "$OUTPUT_FILE"
+echo "Tiempos de ejecución (ordenados de mayor a menor):" >> "$OUTPUT_FILE"
+
+# Se usa el comando sort para ordenar numéricamente la columna del tiempo (después de los dos puntos)
+sort -t: -k2 -nr "$TIME_FILE" >> "$OUTPUT_FILE"
+
+echo "Ejecución completada. Consulta '$OUTPUT_FILE' para ver los resultados y los tiempos ordenados."
