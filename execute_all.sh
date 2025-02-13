@@ -1,26 +1,8 @@
 #!/bin/bash
 
-# Esperar a que el daemon de Docker esté listo
-timeout=30
-while [ $timeout -gt 0 ] && ! docker info >/dev/null 2>&1; do
-    echo "Esperando que el daemon de Docker esté listo... ($timeout segundos restantes)"
-    sleep 1
-    timeout=$((timeout - 1))
-done
-
-if [ $timeout -eq 0 ]; then
-    echo "Error: Tiempo de espera agotado esperando al daemon de Docker"
-    exit 1
-fi
-
-# Configurar buildx de manera más robusta
-docker buildx version || docker buildx install
-docker buildx create --use --name builder default || true
-docker buildx inspect --bootstrap || true
-
 # Repositorio de soluciones
-REPO_URL="https://github.com/Sebastiankz/benchmark.git"
-DIRECTORY="benchmark"
+REPO_URL="https://github.com/OrlandoJrRengifo/codigos.git"
+DIRECTORY="CODIGOS"
 
 # Clonar el repositorio si no existe
 if [ ! -d "$DIRECTORY" ]; then
@@ -56,11 +38,7 @@ for LANG in "go" "rust" "javascript" "python" "c"; do
     fi
 
     echo "Construyendo imagen para $LANG..."
-    # Intentar primero con buildx, si falla usar el builder legacy
-    if ! (cd "$LANG_DIR" && docker buildx build --load -t "$IMAGE_NAME" . 2>/dev/null); then
-        echo "Buildx falló, intentando con builder legacy..."
-        (cd "$LANG_DIR" && docker build -t "$IMAGE_NAME" . 2>/dev/null) || { echo "Error al construir $LANG"; continue; }
-    fi
+    (cd "$LANG_DIR" && docker buildx build --load -t "$IMAGE_NAME" .) || { echo "Error al construir $LANG"; continue; }
 
     echo "Ejecutando contenedor para $LANG..."
     mkdir -p "logs/$LANG"
