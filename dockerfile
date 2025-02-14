@@ -1,13 +1,13 @@
-FROM docker:dind
+FROM docker:stable
 
-# Crear directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copiar los archivos necesarios
-COPY . .
+# Copia el script de ejecución al contenedor
+COPY execute_all.sh .
 
-# Dar permisos de ejecución al script
+# Otorga permisos de ejecución
 RUN chmod +x execute_all.sh
 
-# Comando por defecto
-CMD ["./execute_all.sh"]
+# Al iniciar, se ejecuta el script
+CMD ["./execute_all.sh"] 

@@ -1,42 +1,28 @@
 #!/bin/sh
+set -e
 
-# Iniciar el daemon de Docker
-dockerd &
-sleep 5  # Esperar a que el daemon esté listo
+# Clonar el repositorio con las soluciones
+git clone https://github.com/OrlandoJrRengifo/runner.git cloned_repo
 
-# Función para imprimir separadores
-print_separator() {
-    echo "----------------------------------------"
-    echo "Running $1 solution"
-    echo "----------------------------------------"
-}
+cd cloned_repo
 
-# Construir y ejecutar solución en Go
-print_separator "Go"
-docker build -f Dockerfile.go -t solution-go .
-docker run --rm solution-go
+# Archivo donde se acumularán todas las salidas
+OUTPUT_FILE="master_output.txt"
+> $OUTPUT_FILE
 
-# Construir y ejecutar solución en Rust
-print_separator "Rust"
-docker build -f Dockerfile.rust -t solution-rust .
-docker run --rm solution-rust
+# Lista de lenguajes (asegúrate de que los nombres de las carpetas coinciden)
+LANGUAGES="c go rust javascript python"
 
-# Construir y ejecutar solución en JavaScript
-print_separator "JavaScript"
-docker build -f Dockerfile.node -t solution-js .
-docker run --rm solution-js
+for lang in $LANGUAGES; do
+    echo "=== Ejecutando solución en $lang ===" | tee -a $OUTPUT_FILE
+    cd $lang
+    # Construye la imagen con el Dockerfile de la carpeta actual
+    docker build -t solution_$lang .
+    # Ejecuta el contenedor y agrega su salida al archivo maestro
+    docker run --rm solution_$lang >> ../$OUTPUT_FILE
+    cd ..
+    echo "" >> $OUTPUT_FILE
+done
 
-# Construir y ejecutar solución en Python
-print_separator "Python"
-docker build -f Dockerfile.python -t solution-python .
-docker run --rm solution-python
-
-# Construir y ejecutar solución en C
-print_separator "C"
-docker build -f Dockerfile.c -t solution-c .
-docker run --rm solution-c
-
-# Mostrar resumen
-echo "----------------------------------------"
-echo "All solutions completed"
-echo "----------------------------------------"
+# Imprime la salida final
+cat $OUTPUT_FILE
