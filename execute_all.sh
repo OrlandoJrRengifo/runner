@@ -2,6 +2,18 @@
 
 echo "🚀 Iniciando benchmarks..."
 
+# Verificar que Docker esté corriendo
+if ! docker info >/dev/null 2>&1; then
+    echo "❌ Error: Docker no está corriendo. Intentando iniciar Docker..."
+    sudo systemctl start docker
+    sleep 5  # Esperar a que Docker inicie completamente
+    
+    if ! docker info >/dev/null 2>&1; then
+        echo "❌ Error: No se pudo iniciar Docker. Por favor, verifica la instalación."
+        exit 1
+    fi
+fi
+
 # Limpiar directorio temporal si existe
 rm -rf ./temp_codigos
 mkdir -p ./temp_codigos
@@ -21,11 +33,17 @@ for dir in c go javascript python rust; do
         
         # Construir imagen Docker
         echo "   🏗️ Construyendo imagen Docker para $dir..."
-        docker build -t "${dir}-benchmark" "$dir"
+        docker build -t "${dir}-benchmark" "$dir" || {
+            echo "   ❌ Error: Fallo al construir la imagen para $dir"
+            continue
+        }
         
-        # Ejecutar contenedor y capturar tiempo
+        # Ejecutar contenedor y capturar tiempo usando --network host
         echo "   🏃 Ejecutando benchmark..."
-        TIEMPO=$(docker run --rm "${dir}-benchmark")
+        TIEMPO=$(docker run --rm --network host "${dir}-benchmark") || {
+            echo "   ❌ Error: Fallo al ejecutar el contenedor para $dir"
+            continue
+        }
         
         if [ -n "$TIEMPO" ]; then
             echo "   ✅ $dir: $TIEMPO"
