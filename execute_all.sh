@@ -1,29 +1,33 @@
 #!/bin/bash
 
-# Clonar el repositorio con las soluciones
+# Clonar ambos repositorios
 git clone https://github.com/OrlandoJrRengifo/codigos.git
+git clone https://github.com/OrlandoJrRengifo/runner.git
+
+# Cambiar al directorio donde están los códigos
 cd codigos
 
-# Recorrer carpetas de lenguajes
 echo "Ejecutando benchmarks..."
-for dir in */; do
-  # Verifica si es un directorio válido
-  if [ -d "$dir" ]; then
-    LENGUAJE=$(basename "$dir")
+
+# Lista de lenguajes a procesar
+LENGUAJES=("c" "go" "javascript" "python" "rust")
+
+# Procesar cada lenguaje
+for LENGUAJE in "${LENGUAJES[@]}"; do
     echo "🔹 Ejecutando $LENGUAJE..."
     
     # Construir imagen Docker
-    docker build -t "${LENGUAJE//+/}-benchmark" "$dir"
+    docker build -t "${LENGUAJE}-benchmark" "$LENGUAJE"
     
     # Ejecutar contenedor y capturar tiempo
-    TIEMPO=$(docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "${LENGUAJE//+/}-benchmark")
+    TIEMPO=$(docker run --rm "${LENGUAJE}-benchmark")
     
     if [ -n "$TIEMPO" ]; then
-      echo "✅ $LENGUAJE: $TIEMPO ms"
+        echo "$LENGUAJE: $TIEMPO ms"
     else
-      echo "❌ Error: Salida inesperada del contenedor para $LENGUAJE"
+        echo "❌ Error: Salida inesperada del contenedor para $LENGUAJE"
     fi
-  fi
 done
 
-echo "✅ Benchmarks completados."
+# Regresar al directorio original
+cd ..
