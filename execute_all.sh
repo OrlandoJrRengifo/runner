@@ -12,10 +12,10 @@ for dir in */; do
     LENGUAJE=$(basename "$dir")
     echo "🔹 Ejecutando $LENGUAJE..."
 
-    # Construir imagen Docker
+    # Construir imagen Docker (montando el socket local)
     docker build -t "${LENGUAJE//+/}-benchmark" "$dir"
 
-    # Ejecutar contenedor y capturar tiempo (montando el socket de Docker)
+    # Ejecutar contenedor y capturar tiempo (montando el socket local)
     TIEMPO=$(docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "${LENGUAJE//+/}-benchmark")
 
     if [ -n "$TIEMPO" ]; then
