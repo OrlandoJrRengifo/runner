@@ -16,11 +16,11 @@ LENGUAJES=("c" "go" "javascript" "python" "rust")
 for LENGUAJE in "${LENGUAJES[@]}"; do
     echo "🔹 Ejecutando $LENGUAJE..."
     
-    # Construir imagen Docker
-    docker build -t "${LENGUAJE}-benchmark" "$LENGUAJE"
+    # Construir imagen Docker usando el socket local
+    DOCKER_HOST=unix:///var/run/docker.sock docker build -t "${LENGUAJE}-benchmark" "$LENGUAJE"
     
-    # Ejecutar contenedor y capturar tiempo
-    TIEMPO=$(docker run --rm "${LENGUAJE}-benchmark")
+    # Ejecutar contenedor usando el socket local
+    TIEMPO=$(DOCKER_HOST=unix:///var/run/docker.sock docker run --rm "${LENGUAJE}-benchmark")
     
     if [ -n "$TIEMPO" ]; then
         echo "$LENGUAJE: $TIEMPO ms"
