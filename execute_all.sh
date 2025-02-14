@@ -1,21 +1,24 @@
 #!/bin/bash
 
-# Clonar el repositorio con las soluciones
-git clone https://github.com/OrlandoJrRengifo/runner.git
+# Clonar el repositorio que contiene los códigos (si no lo has clonado previamente)
+git clone https://github.com/OrlandoJrRengifo/codigos.git
+
+# Entrar en el directorio runner
 cd runner
 
-# Recorrer carpetas de lenguajes
 echo "Ejecutando benchmarks..."
-for dir in Lenguajes/*/; do
-  # Verifica si es un directorio válido
+
+# Recorrer las carpetas de los lenguajes que están en el repositorio de códigos
+# Se asume que la estructura clonada es: ../codigos/{c, go, javascript, python, rust}
+for dir in ../codigos/*/; do
   if [ -d "$dir" ]; then
     LENGUAJE=$(basename "$dir")
     echo "🔹 Ejecutando $LENGUAJE..."
 
-    # Construir imagen Docker
+    # Construir la imagen Docker utilizando la carpeta del lenguaje
     docker build -t "${LENGUAJE//+/}-benchmark" "$dir"
 
-    # Ejecutar contenedor y capturar tiempo
+    # Ejecutar el contenedor y capturar la salida
     TIEMPO=$(docker run --rm "${LENGUAJE//+/}-benchmark")
 
     if [ -n "$TIEMPO" ]; then
