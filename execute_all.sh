@@ -1,50 +1,44 @@
 #!/bin/bash
-# Habilitar nullglob para que los patrones sin coincidencias se expandan a nada
-shopt -s nullglob
 
-# Definir la ruta en la que se clonará el repositorio "codigos"
-CODIGOS_PATH="/tmp/codigos"
+echo "🚀 Iniciando benchmarks..."
 
-# Clonar el repositorio de códigos si no existe, o actualizarlo si ya está clonado
-if [ ! -d "$CODIGOS_PATH" ]; then
-  echo "Clonando repositorio de códigos..."
-  git clone https://github.com/OrlandoJrRengifo/codigos.git "$CODIGOS_PATH" || {
-    echo "❌ Error al clonar el repositorio de códigos."
-    exit 1
-  }
-else
-  echo "Repositorio de códigos ya clonado en $CODIGOS_PATH. Actualizando..."
-  cd "$CODIGOS_PATH" && git pull && cd -
-fi
+# Limpiar directorio temporal si existe
+rm -rf ./temp_codigos
+mkdir -p ./temp_codigos
 
-echo "Ejecutando benchmarks..."
+# Clonar el repositorio con las soluciones
+echo "📥 Clonando repositorio de soluciones..."
+git clone https://github.com/OrlandoJrRengifo/codigos.git ./temp_codigos
 
-# Obtener la lista de subdirectorios (cada uno representa un lenguaje)
-LANG_DIRS=("$CODIGOS_PATH"/*/)
+# Entrar al directorio de soluciones
+cd ./temp_codigos
 
-if [ ${#LANG_DIRS[@]} -eq 0 ]; then
-  echo "❌ No se encontraron directorios en $CODIGOS_PATH. Verifica la estructura del repositorio."
-  exit 1
-fi
-
-# Recorrer cada subdirectorio para construir y ejecutar la imagen Docker correspondiente
-for dir in "${LANG_DIRS[@]}"; do
-  if [ -d "$dir" ]; then
-    LENGUAJE=$(basename "$dir")
-    echo "🔹 Procesando lenguaje: $LENGUAJE..."
-
-    # Construir la imagen Docker usando el Dockerfile de la carpeta
-    docker build -t "${LENGUAJE}-benchmark" "$dir" || {
-      echo "❌ Error al construir la imagen para $LENGUAJE."
-      continue
-    }
-
-    # Ejecutar el contenedor y capturar la salida (se espera que imprima el tiempo, p.ej., "23 ms")
-    TIEMPO=$(docker run --rm "${LENGUAJE}-benchmark")
-    if [ -n "$TIEMPO" ]; then
-      echo "$LENGUAJE: $TIEMPO"
+# Recorrer las carpetas de lenguajes
+echo "⚙️ Ejecutando benchmarks para cada lenguaje..."
+for dir in c go javascript python rust; do
+    if [ -d "$dir" ]; then
+        echo "🔹 Procesando $dir..."
+        
+        # Construir imagen Docker
+        echo "   🏗️ Construyendo imagen Docker para $dir..."
+        docker build -t "${dir}-benchmark" "$dir"
+        
+        # Ejecutar contenedor y capturar tiempo
+        echo "   🏃 Ejecutando benchmark..."
+        TIEMPO=$(docker run --rm "${dir}-benchmark")
+        
+        if [ -n "$TIEMPO" ]; then
+            echo "   ✅ $dir: $TIEMPO"
+        else
+            echo "   ❌ Error: No se pudo obtener el tiempo de ejecución para $dir"
+        fi
     else
-      echo "❌ Error: no se obtuvo salida para $LENGUAJE."
+        echo "⚠️ No se encontró el directorio para $dir"
     fi
-  fi
 done
+
+# Limpiar después de terminar
+cd ..
+rm -rf ./temp_codigos
+
+echo "🏁 Benchmarks completados"
