@@ -1,28 +1,29 @@
-#!/bin/sh
-set -e
+#!/bin/bash
 
 # Clonar el repositorio con las soluciones
-git clone https://github.com/OrlandoJrRengifo/runner.git cloned_repo
+git clone https://github.com/OrlandoJrRengifo/runner.git
+cd runner
 
-cd cloned_repo
+# Recorrer carpetas de lenguajes
+echo "Ejecutando benchmarks..."
+for dir in Lenguajes/*/; do
+  # Verifica si es un directorio válido
+  if [ -d "$dir" ]; then
+    LENGUAJE=$(basename "$dir")
+    echo "🔹 Ejecutando $LENGUAJE..."
 
-# Archivo donde se acumularán todas las salidas
-OUTPUT_FILE="master_output.txt"
-> $OUTPUT_FILE
+    # Construir imagen Docker
+    docker build -t "${LENGUAJE//+/}-benchmark" "$dir"
 
-# Lista de lenguajes (asegúrate de que los nombres de las carpetas coinciden)
-LANGUAGES="c go rust javascript python"
+    # Ejecutar contenedor y capturar tiempo
+    TIEMPO=$(docker run --rm "${LENGUAJE//+/}-benchmark")
 
-for lang in $LANGUAGES; do
-    echo "=== Ejecutando solución en $lang ===" | tee -a $OUTPUT_FILE
-    cd $lang
-    # Construye la imagen con el Dockerfile de la carpeta actual
-    docker build -t solution_$lang .
-    # Ejecuta el contenedor y agrega su salida al archivo maestro
-    docker run --rm solution_$lang >> ../$OUTPUT_FILE
-    cd ..
-    echo "" >> $OUTPUT_FILE
+    if [ -n "$TIEMPO" ]; then
+      echo "$LENGUAJE: $TIEMPO ms"
+    else
+      echo "❌ Error: Salida inesperada del contenedor para $LENGUAJE"
+    fi
+  fi
 done
 
-# Imprime la salida final
-cat $OUTPUT_FILE
+
