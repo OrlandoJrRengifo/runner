@@ -15,8 +15,8 @@ for dir in */; do
     # Construir imagen Docker
     docker build -t "${LENGUAJE//+/}-benchmark" "$dir"
 
-    # Ejecutar contenedor y capturar tiempo
-    TIEMPO=$(docker run --rm "${LENGUAJE//+/}-benchmark")
+    # Ejecutar contenedor y capturar tiempo (montando el socket de Docker)
+    TIEMPO=$(docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "${LENGUAJE//+/}-benchmark")
 
     if [ -n "$TIEMPO" ]; then
       echo "$LENGUAJE: $TIEMPO ms"
